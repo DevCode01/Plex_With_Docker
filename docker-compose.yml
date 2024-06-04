@@ -1,0 +1,317 @@
+version: "2"
+services:
+    expressvpn:
+        image: polkaned/expressvpn
+        container_name: expressvpn
+        environment:
+            - ACTIVATION_CODE=YOUR_ACTIVATION_CODE
+        cap_add:
+            - NET_ADMIN
+        devices:
+            - "/dev/net/tun:/dev/net/tun"
+        privileged: true
+        tty: true
+        ports:
+            # Flaresolver
+            - 8191:8191
+            # QBT UI Port
+            - 8090:8090
+            # Bittorrent port
+            - 6881:6881
+            - 6881:6881/udp
+            # Deluge port
+            - 8112:8112
+            # Web port
+            - 8080:8080
+            - 9117:9117
+            # Sonarr port
+            - 8989:8989
+            # Radarr port
+            - 7878:7878
+            # Lidarr port
+            - 8686:8686
+            # Prowlarr port
+            - 9696:9696
+            # Bazarr port
+            - 6767:6767
+            # xTeve
+            - 34400:34400
+        command: /bin/bash
+        restart: unless-stopped
+
+    flaresolverr:
+        image: flaresolverr/flaresolverr:latest
+        container_name: flaresolverr
+        environment:
+            - LOG_LEVEL=info
+            - LOG_HTML=true
+            - CAPTCHA_SOLVER=none
+        network_mode: service:expressvpn
+        restart: unless-stopped
+    qbittorrent:
+        image: linuxserver/qbittorrent:version-4.6.0-r0
+        container_name: qbittorrent
+        environment:
+            - PUID=0
+            - PGID=0
+            - UMASK_SET=022
+            - WEBUI_PORT=8090
+        volumes:
+            - /home/xxxx/Plex/qbt/config:/config
+            - /mnt/hard_drive/video/SeriesDownloads:/downloads
+            - /mnt/hard_drive/video/Downloads:/tvdownloads
+            - /mnt/hard_drive/video/SeriesDownloads:/seriesdownloads
+            - /mnt/hard_drive/video/FilmDownloads:/filmdownloads
+            - /mnt/hard_drive/video/MusicDownloads:/musicdownloads
+        network_mode: service:expressvpn
+        restart: unless-stopped
+    xteve:
+        image: dnsforge/xteve:latest
+        restart: unless-stopped
+        container_name: xteve
+        volumes:
+            - /home/xxxx/Plex/xteve:/home/xteve/conf
+        network_mode: service:expressvpn
+    jackett:
+        image: linuxserver/jackett
+        container_name: jackett
+        environment:
+            - PUID=0
+            - PGID=0
+            - TZ=GB
+        volumes:
+            - /home/xxxx/Plex/jackett:/config
+        restart: unless-stopped
+        network_mode: service:expressvpn
+        depends_on:
+            - expressvpn
+            - qbittorrent
+    prowlarr:
+        image: linuxserver/prowlarr:latest
+        container_name: prowlarr
+        environment:
+            - PUID=0
+            - PGID=0
+            - TZ=GB
+        volumes:
+            - /home/xxxx/Plex/prowlarr:/config
+        restart: unless-stopped
+        network_mode: service:expressvpn
+        depends_on:
+            - expressvpn
+            - qbittorrent
+    bazarr:
+        image: linuxserver/bazarr
+        container_name: bazarr
+        restart: unless-stopped
+        network_mode: service:expressvpn
+        environment:
+            - PUID=0
+            - PGID=0
+        volumes:
+            - /home/xxxx/Plex/bazarr:/config
+            - /mnt/hard_drive/video/TV:/tv
+            - /mnt/hard_drive/video/SeriesDownloads:/downloads
+    deluge:
+        container_name: deluge
+        image: linuxserver/deluge
+        restart: unless-stopped
+        network_mode: service:expressvpn 
+        environment:
+            - PUID=0
+            - PGID=0 
+        volumes:
+            - /mnt/hard_drive/video/Seeding:/downloads
+            - /mnt/hard_drive/video/FilmDownloads:/films
+            - /home/xxxx/Plex/:/configDeluge
+            - /home/xxxx/Plex/deluge:/config/
+
+    sonarr:
+        image: linuxserver/sonarr
+        container_name: sonarr_v3
+        environment:
+            - PUID=0
+            - PGID=0
+            - TZ=GB
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - /home/xxxx/Plex/sonarr/config:/config
+            - /mnt/hard_drive/video/TV:/tv
+            - /mnt/hard_drive/video/SeriesDownloads:/downloads
+        restart: unless-stopped
+        network_mode: service:expressvpn
+        depends_on:
+            - prowlarr
+            - qbittorrent
+    overseerr:
+        image: lscr.io/linuxserver/overseerr
+        container_name: overseerr
+        ports:
+            - 5055:5055/tcp
+        environment:
+            - PUID=0
+            - PGID=0
+            - TZ=Europe/paris
+        volumes:
+            - ./config:/config
+        restart: unless-stopped
+    radarr:
+        image: linuxserver/radarr
+        container_name: radarr_v3
+        environment:
+            - PUID=0
+            - PGID=0
+            - TZ=GB
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - /home/xxxx/Plex/radarr3/config:/config
+            - /mnt/hard_drive/video/Films:/movies
+            - /mnt/hard_drive/video/FilmDownloads:/downloads
+        restart: unless-stopped
+        network_mode: service:expressvpn
+        depends_on:
+            - prowlarr
+            - qbittorrent
+            - jackett
+    lidarr:
+        image: linuxserver/lidarr
+        container_name: lidarr
+        environment:
+            - PUID=0
+            - PGID=0
+            - TZ=GB
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - /home/xxxx/Plex/lidarr/config:/config
+            - /mnt/hard_drive/music:/music
+            - /mnt/hard_drive/video/MusicDownloads:/downloads
+        restart: unless-stopped
+        network_mode: service:expressvpn
+        depends_on:
+            - prowlarr
+            - qbittorrent
+    plex:
+        container_name: plex
+        image: linuxserver/plex
+        devices:
+            - /dev/dri:/dev/dri
+        privileged: true
+        environment:
+            PGID: '0'
+            PUID: '0'
+            VERSION: docker
+        network_mode: host
+        restart: unless-stopped
+        volumes:
+            - /home/xxxx/Plex/plex:/config:rw
+            - /mnt/hard_drive/video/TV:/tv:rw
+            - /mnt/hard_drive/video/Films:/movies:rw
+            - /mnt/hard_drive/music:/music:rw
+            - /mnt/hard_drive/video/FilmDownloads:/allfilms:rw
+            - /mnt/hard_drive/video/SeriesDownloads:/allseries:rw
+
+    influxdb:
+        container_name: influxdb
+        image: influxdb:1.8
+        volumes:
+          - /home/xxxx/Plex/influxdb:/var/lib/influxdb
+        ports:
+          - 8086:8086
+        restart: unless-stopped
+    varken:
+        container_name: varken
+        image: boerderij/varken:develop
+        volumes:
+          - /home/xxxx/Plex/varken:/config
+        environment:
+          - TZ=Europe/Amsterdam
+        depends_on:
+          - influxdb
+        restart: unless-stopped
+    grafana:
+        container_name: grafana
+        image: grafana/grafana:7.3.5
+        ports:
+           - 3000:3000
+        volumes:
+          - /home/xxxx/Plex/grafana:/config
+        environment:
+          - PUID=0
+          - PGID=0
+          - GF_PATHS_DATA=/config/data
+          - GF_PATHS_LOGS=/config/logs
+          - GF_PATHS_PLUGINS=/config/plugins
+          - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+        depends_on:
+          - influxdb
+          - varken
+        restart: unless-stopped
+    tautulli:
+        image: linuxserver/tautulli:v2.10.2-ls42
+        container_name: tautulli
+        environment:
+          - PUID=0
+          - PGID=0
+          - TZ=Etc/UTC
+        volumes:
+          - /home/xxxx/tautulli/config:/config
+        ports:
+          - 8181:8181
+        restart: unless-stopped
+    sonarr-exporter:
+        image: ghcr.io/onedr0p/exportarr:v2.0
+        container_name: sonarr-exporter
+        command: ["sonarr"]
+        environment:
+            URL: 'http://192.168.1.95:8989'
+            APIKEY: 'XXXX'
+        ports:
+          - "9707:9707"
+        restart: unless-stopped
+    radarr-exporter:
+        image: ghcr.io/onedr0p/exportarr:v2.0
+        container_name: radarr-exporter
+        command: ["radarr"]
+        environment:
+            PORT: 9708
+            URL: 'http://192.168.1.95:7878'
+            APIKEY: "XXXX"
+        ports:
+          - "9708:9708"
+        restart: unless-stopped
+    prowlarr-exporter:
+        image: ghcr.io/onedr0p/exportarr:v2.0
+        container_name: prowlarr-exporter
+        command: ["prowlarr"]
+        environment:
+            PORT: 9710
+            URL: "http://192.168.1.95:9696"
+            APIKEY: "XXXX"
+        ports:
+          - "9710:9710"
+        restart: unless-stopped
+    telegraf:
+        image: docker.io/telegraf:latest
+        container_name: telegraf
+        user: root
+        environment:
+          - PUID=0
+          - PGID=0
+        volumes:
+          - /home/xxxx/Plex/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+          - /var/run/docker.sock:/var/run/docker.sock
+        links:
+          - influxdb:influxdb
+    ombi:
+        image: linuxserver/ombi
+        container_name: ombi
+        environment:
+          - TZ=Etc/UTC
+          - PGID=0
+          - PUID=0
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock:ro
+          - /home/xxxx/Plex/ombi/config:/config
+        ports:
+          - "3579:3579"
+        restart: unless-stopped
