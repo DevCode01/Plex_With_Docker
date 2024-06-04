@@ -144,3 +144,13 @@ User-friendly interface for content requests.
 
 ## Why I used some specific image version
 I need to use theses image because I've a specific Grafana configuration who work only with influxbdb 1.8 and varken
+
+## To use the minimal configuration  
+- ExpressVPN  
+- Plex  
+- Radarr  
+- Sonarr  
+- Bazarr  
+- FlareSolverr  
+- QBitTorrent or Deluge  
+- Overseerr  
